@@ -74,6 +74,9 @@ risk_amount = st.number_input("Risk Amount in Dollars", value=1000.0, step=100.0
 if st.button("Calculate Number of Contracts to Buy"):
     closest_contracts = calculate_risks(delta, premium, stop_distance, risk_amount)
 
+# Explanation for the first calculation
+st.info("This tool calculates the number of option contracts you should buy based on your risk tolerance, stop distance on the underlying stock, and the premium of the option.")
+
 # Horizontal line to visually separate the two sections
 st.markdown("<hr style='border:1px solid gray;'>", unsafe_allow_html=True)
 
@@ -89,6 +92,5 @@ if st.button("Calculate Stop Premium"):
     stop_premium = calculate_stop_premium(num_options, initial_premium, max_loss)
     st.write(f"The stop premium to hit a loss of ${max_loss:.2f} is: ${stop_premium:.2f}")
 
-# Provide information about the tool
-st.info("This tool calculates the number of option contracts you should buy based on your risk tolerance, "
-        "stop distance on the underlying stock, and the premium of the option.")
+# Explanation for the second calculation
+st.info("This section calculates the option premium at the stop point that results in a specified maximum loss, based on the number of options and initial premium.")
