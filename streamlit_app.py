@@ -24,23 +24,16 @@ def calculate_risks(delta, premium, stop_distance, risk_amount):
         # Get the three contract options closest to the desired risk amount
         closest_contracts = contract_risks[:3]
 
-        # Define colors for boxes with better contrast for both light and dark modes
-        colors = {
-            "closest": "#e0f4e0",  # Soft green for the closest match
-            "neutral": "#f0f0f0",  # Light gray for neutral
-            "over_limit": "#f6d6d6",  # Soft red for over the limit
-        }
-
         # Display the results horizontally using Streamlit columns
         cols = st.columns(3)  # Create 3 columns for the results
         for idx, (contracts, diff, calculated_risk) in enumerate(closest_contracts):
             # Determine box color based on the risk amount
             if calculated_risk == closest_contracts[0][2]:
-                box_color = colors["closest"]
+                box_color = "#d4edda"
             elif calculated_risk > risk_amount:
-                box_color = colors["over_limit"]
+                box_color = "#f6d6d6"
             else:
-                box_color = colors["neutral"]
+                box_color = "#f0f0f0"
 
             # Render each box in its respective column with improved styles
             cols[idx].markdown(
@@ -59,18 +52,42 @@ def calculate_risks(delta, premium, stop_distance, risk_amount):
         st.error("Please enter valid numeric values.")
         return []
 
+# New function to calculate the stop premium when $1000 loss is hit
+def calculate_stop_premium(num_options, initial_premium, max_loss):
+    total_cost = num_options * initial_premium * 100
+    remaining_value = total_cost - max_loss
+    stop_premium = remaining_value / (num_options * 100)
+    return stop_premium
+
 # Streamlit layout and input fields
 st.title("Options Contracts Calculator")
 
+# --- FIRST CALCULATION (Number of Contracts) ---
+st.subheader("Calculate Number of Contracts to Buy")
 # Input fields with increment/decrement functionality
 delta = st.number_input("Delta at Entry", value=0.60, step=0.01, format="%.2f")
 premium = st.number_input("Premium at Entry Price", value=9.00, step=0.10, format="%.2f")
 stop_distance = st.number_input("Stop Distance on Underlying Stock", value=4.00, step=0.10, format="%.2f")
 risk_amount = st.number_input("Risk Amount in Dollars", value=1000.0, step=100.0, format="%.2f")
 
-# Button to trigger the calculation
+# Button to trigger the main risk calculation
 if st.button("Calculate Number of Contracts to Buy"):
     closest_contracts = calculate_risks(delta, premium, stop_distance, risk_amount)
+
+# Horizontal line to visually separate the two sections
+st.markdown("<hr style='border:1px solid gray;'>", unsafe_allow_html=True)
+
+# --- SECOND CALCULATION (Stop Premium) ---
+st.subheader("Calculate Stop Premium for a Given Maximum Loss")
+# New inputs for stop premium calculation
+num_options = st.number_input("Number of Options", value=5, step=1)
+initial_premium = st.number_input("Initial Option Premium", value=3.00, step=0.10, format="%.2f")
+max_loss = st.number_input("Maximum Loss in Dollars", value=1000.0, step=100.0, format="%.2f")
+
+# Button to trigger the stop premium calculation
+if st.button("Calculate Stop Premium"):
+    stop_premium = calculate_stop_premium(num_options, initial_premium, max_loss)
+    st.write(f"The stop premium to hit a loss of ${max_loss:.2f} is: ${stop_premium:.2f}")
 
 # Provide information about the tool
 st.info("This tool calculates the number of option contracts you should buy based on your risk tolerance, "
