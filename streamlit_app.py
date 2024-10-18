@@ -26,6 +26,7 @@ def calculate_risks(delta, premium, stop_distance, risk_amount):
 
         # Display the results horizontally using Streamlit columns
         cols = st.columns(3)  # Create 3 columns for the results
+        selected_contracts = None  # To store user choice
         for idx, (contracts, diff, calculated_risk) in enumerate(closest_contracts):
             # Determine box color based on the risk amount
             if calculated_risk == closest_contracts[0][2]:
@@ -35,7 +36,11 @@ def calculate_risks(delta, premium, stop_distance, risk_amount):
             else:
                 box_color = "#f0f0f0"
 
-            # Render each box in its respective column with improved styles
+            # Render each box in its respective column with improved styles and clickable buttons
+            if cols[idx].button(f"Select {contracts} contracts"):
+                selected_contracts = contracts
+
+            # Display the contracts and calculated risk in the columns
             cols[idx].markdown(
                 f"""
                 <div style="background-color: {box_color}; color: black; padding: 10px; border-radius: 5px; margin-bottom: 10px; 
@@ -47,17 +52,21 @@ def calculate_risks(delta, premium, stop_distance, risk_amount):
                 unsafe_allow_html=True,
             )
 
-        return closest_contracts
+        return selected_contracts, premium, risk_amount
     except ValueError:
         st.error("Please enter valid numeric values.")
-        return []
+        return None, None, None
 
-# New function to calculate the stop premium when $1000 loss is hit
+# Function to calculate the stop premium when $1000 loss is hit
 def calculate_stop_premium(num_options, initial_premium, max_loss):
     total_cost = num_options * initial_premium * 100
     remaining_value = total_cost - max_loss
     stop_premium = remaining_value / (num_options * 100)
     return stop_premium
+
+# Function to calculate the new premium for the selected profit target
+def calculate_profit_target(selected_contracts, entry_premium, target_profit):
+    return (target_profit / (selected_contracts * 100)) + entry_premium
 
 # Streamlit layout and input fields
 st.title("Options Contracts Calculator")
@@ -71,11 +80,16 @@ stop_distance = st.number_input("Stop Distance on Underlying Stock", value=4.00,
 risk_amount = st.number_input("Risk Amount in Dollars", value=1000.0, step=100.0, format="%.2f")
 
 # Button to trigger the main risk calculation
-if st.button("Calculate Number of Contracts to Buy"):
-    closest_contracts = calculate_risks(delta, premium, stop_distance, risk_amount)
+selected_contracts, entry_premium, target_profit = calculate_risks(delta, premium, stop_distance, risk_amount)
 
 # Explanation for the first calculation
 st.info("This tool calculates the number of option contracts you should buy based on your risk tolerance, stop distance on the underlying stock, and the premium of the option.")
+
+# --- NEW SECTION: Calculate Profit Target ---
+if selected_contracts:
+    st.subheader(f"Calculate Profit Target (for ${target_profit:.2f} Profit)")
+    new_premium = calculate_profit_target(selected_contracts, entry_premium, target_profit)
+    st.write(f"To make a ${target_profit:.2f} profit with {selected_contracts} contracts, the option premium must rise to: ${new_premium:.2f}")
 
 # Horizontal line to visually separate the two sections
 st.markdown("<hr style='border:1px solid gray;'>", unsafe_allow_html=True)
