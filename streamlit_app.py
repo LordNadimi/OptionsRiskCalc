@@ -24,45 +24,10 @@ def calculate_risks(delta, premium, stop_distance, risk_amount):
         # Get the three contract options closest to the desired risk amount
         closest_contracts = contract_risks[:3]
 
-        # Display the results horizontally using Streamlit columns
-        cols = st.columns(3)  # Create 3 columns for the results
-        selected_contracts = None  # To store user choice
-        for idx, (contracts, diff, calculated_risk) in enumerate(closest_contracts):
-            # Determine box color based on the risk amount
-            if calculated_risk == closest_contracts[0][2]:
-                box_color = "#d4edda"
-            elif calculated_risk > risk_amount:
-                box_color = "#f6d6d6"
-            else:
-                box_color = "#f0f0f0"
-
-            # Render each box in its respective column with improved styles and clickable buttons
-            if cols[idx].button(f"Select {contracts} contracts"):
-                selected_contracts = contracts
-
-            # Display the contracts and calculated risk in the columns
-            cols[idx].markdown(
-                f"""
-                <div style="background-color: {box_color}; color: black; padding: 10px; border-radius: 5px; margin-bottom: 10px; 
-                border: 1px solid #ccc; box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);">
-                    <strong>Contracts: {contracts}</strong><br>
-                    Calculated Risk: ${calculated_risk:.2f}
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-        return selected_contracts, premium, risk_amount
+        return closest_contracts
     except ValueError:
         st.error("Please enter valid numeric values.")
-        return None, None, None
-
-# Function to calculate the stop premium when $1000 loss is hit
-def calculate_stop_premium(num_options, initial_premium, max_loss):
-    total_cost = num_options * initial_premium * 100
-    remaining_value = total_cost - max_loss
-    stop_premium = remaining_value / (num_options * 100)
-    return stop_premium
+        return []
 
 # Function to calculate the new premium for the selected profit target
 def calculate_profit_target(selected_contracts, entry_premium, target_profit):
@@ -73,23 +38,66 @@ st.title("Options Contracts Calculator")
 
 # --- FIRST CALCULATION (Number of Contracts) ---
 st.subheader("Calculate Number of Contracts to Buy")
+
 # Input fields with increment/decrement functionality
 delta = st.number_input("Delta at Entry", value=0.60, step=0.01, format="%.2f")
 premium = st.number_input("Premium at Entry Price", value=9.00, step=0.10, format="%.2f")
 stop_distance = st.number_input("Stop Distance on Underlying Stock", value=4.00, step=0.10, format="%.2f")
 risk_amount = st.number_input("Risk Amount in Dollars", value=1000.0, step=100.0, format="%.2f")
 
-# Button to trigger the main risk calculation
-selected_contracts, entry_premium, target_profit = calculate_risks(delta, premium, stop_distance, risk_amount)
+# Trigger the main risk calculation and store the results in session state
+if st.button("Calculate Number of Contracts to Buy"):
+    closest_contracts = calculate_risks(delta, premium, stop_distance, risk_amount)
+    st.session_state['closest_contracts'] = closest_contracts  # Store in session state
 
-# Explanation for the first calculation
-st.info("This tool calculates the number of option contracts you should buy based on your risk tolerance, stop distance on the underlying stock, and the premium of the option.")
+# Retrieve closest contracts from session state (to persist them)
+closest_contracts = st.session_state.get('closest_contracts', None)
+
+# If we have closest contracts calculated, display them
+if closest_contracts:
+    selected_contracts = st.session_state.get('selected_contracts', None)
+    cols = st.columns(3)  # Create 3 columns for the results
+    for idx, (contracts, diff, calculated_risk) in enumerate(closest_contracts):
+        # Determine box color based on the risk amount
+        box_color = "#d4edda" if calculated_risk == closest_contracts[0][2] else "#f6d6d6" if calculated_risk > risk_amount else "#f0f0f0"
+        
+        # Create a button to select each contract
+        if cols[idx].button(f"Select {contracts} contracts"):
+            st.session_state['selected_contracts'] = contracts
+            st.session_state['entry_premium'] = premium
+            st.session_state['target_profit'] = risk_amount
+
+        # Display the contracts and calculated risk in the columns
+        cols[idx].markdown(
+            f"""
+            <div style="background-color: {box_color}; color: black; padding: 10px; border-radius: 5px; margin-bottom: 10px; 
+            border: 1px solid #ccc; box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);">
+                <strong>Contracts: {contracts}</strong><br>
+                Calculated Risk: ${calculated_risk:.2f}
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
 # --- NEW SECTION: Calculate Profit Target ---
+selected_contracts = st.session_state.get('selected_contracts', None)
+entry_premium = st.session_state.get('entry_premium', None)
+target_profit = st.session_state.get('target_profit', None)
+
 if selected_contracts:
     st.subheader(f"Calculate Profit Target (for ${target_profit:.2f} Profit)")
     new_premium = calculate_profit_target(selected_contracts, entry_premium, target_profit)
-    st.write(f"To make a ${target_profit:.2f} profit with {selected_contracts} contracts, the option premium must rise to: ${new_premium:.2f}")
+    
+    # Proper Markdown formatting without extra ** symbols
+    st.markdown(f"""
+        To make a **${target_profit:.2f}** profit with **{selected_contracts} contracts**, 
+        the option premium must rise to: **${new_premium:.2f}**
+    """)
+
+
+
+# Explanation for the first calculation
+st.info("This tool calculates the number of option contracts you should buy based on your risk tolerance, stop distance on the underlying stock, and the premium of the option.")
 
 # Horizontal line to visually separate the two sections
 st.markdown("<hr style='border:1px solid gray;'>", unsafe_allow_html=True)
