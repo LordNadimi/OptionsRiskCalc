@@ -33,6 +33,12 @@ def calculate_risks(delta, premium, stop_distance, risk_amount):
 def calculate_profit_target(selected_contracts, entry_premium, target_profit):
     return (target_profit / (selected_contracts * 100)) + entry_premium
 
+# Function to calculate stop premium for a given maximum loss
+def calculate_stop_premium(num_options, initial_premium, max_loss):
+    # Formula to calculate the stop premium
+    stop_premium = initial_premium - (max_loss / (num_options * 100))
+    return stop_premium
+
 # Streamlit layout and input fields
 st.title("Options Contracts Calculator")
 
